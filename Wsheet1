@@ -1,0 +1,58 @@
+import random
+
+class Individual:
+    def __init__(self, gene_length):
+        self.gene = [random.randint(0, 1) for _ in range(gene_length)]
+        self.fitness = self.calculate_fitness()
+
+    def calculate_fitness(self):
+        return sum(self.gene)
+
+def create_population(pop_size, gene_length):
+    return [Individual(gene_length) for _ in range(pop_size)]
+
+def tournament_selection(population, tournament_size):
+    selected = random.sample(population, tournament_size)
+    selected.sort(key=lambda x: x.fitness, reverse=True)
+    return selected[0]
+
+def one_point_crossover(parent1, parent2):
+    crossover_point = random.randint(1, len(parent1.gene) - 1)
+    child1_gene = parent1.gene[:crossover_point] + parent2.gene[crossover_point:]
+    child2_gene = parent2.gene[:crossover_point] + parent1.gene[crossover_point:]
+    return Individual(len(child1_gene)), Individual(len(child2_gene))
+
+def mutation(individual, mutation_rate):
+    for i in range(len(individual.gene)):
+        if random.random() < mutation_rate:
+            individual.gene[i] = 1 if individual.gene[i] == 0 else 0
+    individual.fitness = individual.calculate_fitness()
+
+def genetic_algorithm(pop_size, gene_length, generations, tournament_size, crossover_rate, mutation_rate):
+    population = create_population(pop_size, gene_length)
+    for generation in range(generations):
+        new_population = []
+        while len(new_population) < pop_size:
+            parent1 = tournament_selection(population, tournament_size)
+            parent2 = tournament_selection(population, tournament_size)
+            if random.random() < crossover_rate:
+                child1, child2 = one_point_crossover(parent1, parent2)
+            else:
+                child1, child2 = parent1, parent2
+            mutation(child1, mutation_rate)
+            mutation(child2, mutation_rate)
+            new_population.extend([child1, child2])
+        new_population.sort(key=lambda x: x.fitness, reverse=True)
+        population = new_population[:pop_size]
+        best_fitness = population[0].fitness
+        print(f"Generation {generation + 1}: Best Fitness = {best_fitness}")
+
+# Parameters
+population_size = 10
+gene_length = 10
+number_of_generations = 5
+tournament_size = 3
+crossover_rate = 0.7
+mutation_rate = 0.01
+
+genetic_algorithm(population_size, gene_length, number_of_generations, tournament_size, crossover_rate, mutation_rate)
