@@ -1,0 +1,55 @@
+import random
+
+# Global variables for gene_length
+gene_length = 50
+
+class Individual:
+    def __init__(self, gene_length):
+        self.gene = [random.uniform(0.0, 1.0) for _ in range(gene_length)]
+        self.fitness = self.calculate_fitness()
+
+    def calculate_fitness(self):
+        # Update based on specific problem
+        return sum(self.gene)  # Example: Sum of real-valued genes
+
+def blend_crossover(parent1, parent2, alpha=0.5):
+    child_gene = [p1 * alpha + p2 * (1 - alpha) for p1, p2 in zip(parent1.gene, parent2.gene)]
+    return Individual(gene_length), Individual(child_gene)
+
+def mutation(individual, mutation_rate, mutation_size):
+    for i in range(len(individual.gene)):
+        if random.random() < mutation_rate:
+            individual.gene[i] += random.uniform(-mutation_size, mutation_size)
+            individual.gene[i] = min(max(individual.gene[i], 0.0), 1.0)
+    individual.fitness = individual.calculate_fitness()
+
+def tournament_selection(population, tournament_size):
+    selected = random.sample(population, tournament_size)
+    selected.sort(key=lambda x: x.fitness, reverse=False)
+    return selected[0]
+
+def genetic_algorithm(pop_size, gene_length, generations, tournament_size, mutation_rate, mutation_size):
+    population = create_population(pop_size, gene_length)
+    for generation in range(generations):
+        new_population = []
+        while len(new_population) < pop_size:
+            parent1 = tournament_selection(population, tournament_size)
+            parent2 = tournament_selection(population, tournament_size)
+            child1, child2 = blend_crossover(parent1, parent2)
+            mutation(child1, mutation_rate, mutation_size)
+            mutation(child2, mutation_rate, mutation_size)
+            new_population.extend([child1, child2])
+        new_population.sort(key=lambda x: x.fitness, reverse=False)
+        population = new_population[:pop_size]
+        best_fitness = population[0].fitness
+        avg_fitness = sum(ind.fitness for ind in population) / pop_size
+        print(f"Generation {generation + 1}: Best Fitness = {best_fitness}, Average Fitness = {avg_fitness}")
+
+# Parameters
+population_size = 50
+number_of_generations = 50
+tournament_size = 3
+mutation_rate = 0.05
+mutation_size = 0.1
+
+genetic_algorithm(population_size, gene_length, number_of_generations, tournament_size, mutation_rate, mutation_size)
