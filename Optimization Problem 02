@@ -1,0 +1,111 @@
+import numpy as np
+import random
+
+np.seterr(all='raise')
+
+def fitness_function_2(x):
+    try:
+        term1 = np.sum(np.square(x))
+        term2 = np.square(np.sum(0.5 * np.arange(1, len(x) + 1) * x))
+        term3 = np.square(term2)
+        result = term1 + term2 + term3
+        # Preventing fitness from being zero to avoid division by zero
+        return max(result, 1e-8)
+    except FloatingPointError:
+        return float('inf')  # Return infinity if overflow/underflow occurs
+
+class Individual:
+    def __init__(self, gene_length, bounds):
+        self.gene = np.array([random.uniform(low, high) for low, high in bounds])
+        self.fitness = self.calculate_fitness()
+
+    def calculate_fitness(self):
+        fitness_val = fitness_function_2(self.gene)
+        # Invert fitness function for minimization
+        return 1 / fitness_val if fitness_val != 0 else float('inf')
+
+def create_population(pop_size, gene_length, bounds):
+    return [Individual(gene_length, bounds) for _ in range(pop_size)]
+
+def tournament_selection(population, tournament_size):
+    selected = random.sample(population, tournament_size)
+    selected.sort(key=lambda x: x.fitness, reverse=True)
+    return selected[0]
+
+def mutation(individual, mutation_rate, mutation_size, bounds):
+    for i in range(len(individual.gene)):
+        if random.random() < mutation_rate:
+            mutation_value = np.random.normal(0, mutation_size)
+            individual.gene[i] += mutation_value
+            low, high = bounds[i]
+            individual.gene[i] = np.clip(individual.gene[i], low, high)
+    individual.fitness = individual.calculate_fitness()
+
+def one_point_crossover(parent1, parent2):
+    crossover_point = random.randint(1, len(parent1.gene) - 1)
+    child1_gene = np.concatenate((parent1.gene[:crossover_point], parent2.gene[crossover_point:]))
+    child2_gene = np.concatenate((parent2.gene[:crossover_point], parent1.gene[crossover_point:]))
+    return Individual(len(child1_gene), bounds), Individual(len(child2_gene), bounds)
+
+
+def genetic_algorithm(pop_size, gene_length, generations, tournament_size, mutation_size, bounds):
+    mutation_rate = 0.01 
+    population = create_population(pop_size, gene_length, bounds)
+    best_fitness_history = []
+
+    for generation in range(generations):
+        new_population = []
+        for _ in range(pop_size // 2):
+            parent1 = tournament_selection(population, tournament_size)
+            parent2 = tournament_selection(population, tournament_size)
+
+            child1, child2 = one_point_crossover(parent1, parent2)
+            mutation(child1, mutation_rate, mutation_size, bounds)
+            mutation(child2, mutation_rate, mutation_size, bounds)
+
+            new_population.extend([child1, child2])
+
+        # Sort and select the top individuals to form the new population
+        population = sorted(new_population, key=lambda x: x.fitness, reverse=True)[:pop_size]
+
+        # Record the best fitness in this generation
+        best_fitness = 1 / population[0].fitness  # Invert since we are minimizing
+        best_fitness_history.append(best_fitness)
+        avg_fitness = np.mean([1 / ind.fitness for ind in population])  # Invert for minimization
+        print(f"Generation {generation + 1}: Best Fitness = {best_fitness}, Average Fitness = {avg_fitness}")
+
+    return population, best_fitness_history
+
+# Parameters for the genetic algorithm
+population_size = 100
+gene_length = 20
+number_of_generations = 200
+tournament_size = 5
+mutation_size = 0.1
+bounds = [(-5, 10)] * gene_length
+
+# Run the genetic algorithm for the second optimization problem
+final_population, best_fitness_history = genetic_algorithm(
+    population_size,
+    gene_length,
+    number_of_generations,
+    tournament_size,
+    mutation_size,
+    bounds
+)
+
+# Find the best individual from the final population
+best_individual_index = np.argmin([ind.fitness for ind in final_population])  # Use list comprehension to extract fitness
+best_individual = final_population[best_individual_index]
+
+# Extract the gene and fitness of the best individual
+best_individual_gene = best_individual.gene
+best_individual_fitness = 1 / best_individual.fitness  # Invert since we are minimizing
+
+print(f"Best Individual Gene: {best_individual_gene}")
+print(f"Best Individual Fitness: {best_individual_fitness}")
+
+
+
+
+
