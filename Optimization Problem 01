@@ -1,0 +1,75 @@
+import numpy as np
+import random
+
+# Define the fitness function for the first optimization problem
+def fitness_function_1(individual):
+    x = individual
+    return (x[0] - 1)**2 + sum(i * (2*x[i] - x[i-1])**2 for i in range(1, len(x)))
+
+# Define the individual class for real number genes
+class Individual:
+    def __init__(self, gene_length, bounds):
+        self.gene = np.array([random.uniform(low, high) for low, high in bounds])
+        self.fitness = fitness_function_1(self.gene)
+
+# Create a population
+def create_population(pop_size, gene_length, bounds):
+    return [Individual(gene_length, bounds) for _ in range(pop_size)]
+
+# Tournament selection
+def tournament_selection(population, tournament_size):
+    selected = random.sample(population, tournament_size)
+    selected.sort(key=lambda x: x.fitness, reverse=False)
+    return selected[0]
+
+# Mutation for real number genes
+def mutation(individual, mutation_rate, mutation_size, bounds):
+    for i in range(len(individual.gene)):
+        if random.random() < mutation_rate:
+            individual.gene[i] += np.random.normal(0, mutation_size)
+            # Ensure the gene remains within bounds
+            low, high = bounds[i]
+            individual.gene[i] = min(max(individual.gene[i], low), high)
+    individual.fitness = fitness_function_1(individual.gene)
+
+# One-point crossover for real number genes
+def one_point_crossover(parent1, parent2):
+    crossover_point = random.randint(1, len(parent1.gene) - 1)
+    child1_gene = np.concatenate((parent1.gene[:crossover_point], parent2.gene[crossover_point:]))
+    child2_gene = np.concatenate((parent2.gene[:crossover_point], parent1.gene[crossover_point:]))
+    return Individual(len(child1_gene), bounds), Individual(len(child2_gene), bounds)
+
+# Genetic algorithm
+def genetic_algorithm(pop_size, gene_length, generations, tournament_size, crossover_rate, mutation_rate, mutation_size, bounds):
+    population = create_population(pop_size, gene_length, bounds)
+    for generation in range(generations):
+        new_population = []
+        while len(new_population) < pop_size:
+            parent1 = tournament_selection(population, tournament_size)
+            parent2 = tournament_selection(population, tournament_size)
+            if random.random() < crossover_rate:
+                child1, child2 = one_point_crossover(parent1, parent2)
+            else:
+                child1, child2 = parent1, parent2
+            mutation(child1, mutation_rate, mutation_size, bounds)
+            mutation(child2, mutation_rate, mutation_size, bounds)
+            new_population.extend([child1, child2])
+        new_population.sort(key=lambda x: x.fitness, reverse=False)
+        population = new_population[:pop_size]
+
+        best_fitness = population[0].fitness
+        avg_fitness = sum(ind.fitness for ind in population) / pop_size
+        print(f"Generation {generation + 1}: Best Fitness = {best_fitness:.4f}, Average Fitness = {avg_fitness:.4f}")
+
+# Parameters for the GA
+population_size = 50
+gene_length = 20  # As specified by the problem, d=20
+number_of_generations = 100
+tournament_size = 3
+crossover_rate = 0.7
+mutation_rate = 0.01
+mutation_size = 0.1
+bounds = [(-10, 10)] * gene_length  # Bounds as per the problem
+
+# Run the GA
+genetic_algorithm(population_size, gene_length, number_of_generations, tournament_size, crossover_rate, mutation_rate, mutation_size, bounds)
