@@ -2,15 +2,17 @@ import numpy as np
 import random
 
 # Define the fitness function for the first optimization problem
-def fitness_function_1(individual):
-    x = individual
+def fitness_function_1(x):
     return (x[0] - 1)**2 + sum(i * (2*x[i] - x[i-1])**2 for i in range(1, len(x)))
 
 # Define the individual class for real number genes
 class Individual:
     def __init__(self, gene_length, bounds):
         self.gene = np.array([random.uniform(low, high) for low, high in bounds])
-        self.fitness = fitness_function_1(self.gene)
+        self.fitness = self.calculate_fitness()
+
+    def calculate_fitness(self):
+        return fitness_function_1(self.gene)
 
 # Create a population
 def create_population(pop_size, gene_length, bounds):
@@ -27,10 +29,9 @@ def mutation(individual, mutation_rate, mutation_size, bounds):
     for i in range(len(individual.gene)):
         if random.random() < mutation_rate:
             individual.gene[i] += np.random.normal(0, mutation_size)
-            # Ensure the gene remains within bounds
             low, high = bounds[i]
             individual.gene[i] = min(max(individual.gene[i], low), high)
-    individual.fitness = fitness_function_1(individual.gene)
+    individual.fitness = individual.calculate_fitness()
 
 # One-point crossover for real number genes
 def one_point_crossover(parent1, parent2):
@@ -40,8 +41,15 @@ def one_point_crossover(parent1, parent2):
     return Individual(len(child1_gene), bounds), Individual(len(child2_gene), bounds)
 
 # Genetic algorithm
-def genetic_algorithm(pop_size, gene_length, generations, tournament_size, crossover_rate, mutation_rate, mutation_size, bounds):
+def genetic_algorithm(pop_size, gene_length, generations, tournament_size, mutation_size, bounds):
     population = create_population(pop_size, gene_length, bounds)
+    # Start with higher mutation rate to explore the space
+    mutation_rate = 0.1  
+    # Start with higher crossover rate for broader search
+    crossover_rate = 0.9  
+
+    best_fitness_history = []
+    
     for generation in range(generations):
         new_population = []
         while len(new_population) < pop_size:
@@ -54,22 +62,27 @@ def genetic_algorithm(pop_size, gene_length, generations, tournament_size, cross
             mutation(child1, mutation_rate, mutation_size, bounds)
             mutation(child2, mutation_rate, mutation_size, bounds)
             new_population.extend([child1, child2])
-        new_population.sort(key=lambda x: x.fitness, reverse=False)
-        population = new_population[:pop_size]
+        population = sorted(new_population, key=lambda x: x.fitness)[:pop_size]
 
         best_fitness = population[0].fitness
+        best_fitness_history.append(best_fitness)
         avg_fitness = sum(ind.fitness for ind in population) / pop_size
         print(f"Generation {generation + 1}: Best Fitness = {best_fitness:.4f}, Average Fitness = {avg_fitness:.4f}")
 
+        # Adapt mutation rate and crossover rate
+        if generation % 10 == 0 and generation > 0:
+            mutation_rate *= 0.9  # Decrease mutation rate to refine search
+            crossover_rate *= 0.95  # Slightly decrease crossover rate
+
+    return best_fitness_history
+
 # Parameters for the GA
-population_size = 50
+population_size = 100  # Increased population size for a more diverse genetic pool
 gene_length = 20  # As specified by the problem, d=20
-number_of_generations = 100
-tournament_size = 3
-crossover_rate = 0.7
-mutation_rate = 0.01
-mutation_size = 0.1
+number_of_generations = 200  # Increased number of generations
+tournament_size = 5  # Slightly larger tournament size
+mutation_size = 0.1  # Mutation size
 bounds = [(-10, 10)] * gene_length  # Bounds as per the problem
 
 # Run the GA
-genetic_algorithm(population_size, gene_length, number_of_generations, tournament_size, crossover_rate, mutation_rate, mutation_size, bounds)
+best_fitness_history = genetic_algorithm(population_size, gene_length, number_of_generations, tournament_size, mutation_size, bounds)
